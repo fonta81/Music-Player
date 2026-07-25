@@ -1,71 +1,171 @@
 
-    Screen { align: center middle; }
-    
-    #main-container {
-        width: 100%;
-        height: 1fr;
-        padding: 1;
-    }
-    
-    #left-panel {
-        width: 60%;
-        height: 100%;
-        border: solid $primary;
-        padding: 1;
-    }
-    
-    #right-panel {
-        width: 40%;
-        height: 100%;
-        border: solid $primary-lighten-2;
-        padding: 1;
-    }
-    
-    #track-info {
-        height: auto;
-        padding: 1;
-        background: $surface-darken-1;
-        border: solid $primary-darken-2;
-        margin-bottom: 1;
-    }
-    
-    #controls {
-        height: auto;
-        align: center middle;
-        padding: 1;
-    }
-    
-    #progress-container {
-        height: auto;
-        padding: 1 0;
-    }
-    
-    #volume-container {
-        height: auto;
-        padding: 1 0;
-    }
-    
-    DataTable {
-        height: 1fr;
-        border: none;
-    }
-    
-    .info-label {
-        color: $text-muted;
-        text-style: bold;
-    }
-    
-    .info-value {
-        color: $text;
-    }
-    
-    #status {
-        text-align: center;
-        color: $success;
-        text-style: bold;
-    }
-    
-    Button {
-        width: auto;
-        margin: 0 1;
-    }
+/* ============================================================
+   style.tcss — Estilos para el Reproductor MP3 (Textual)
+   ============================================================ */
+
+Screen {
+    background: $surface;
+}
+
+/* ---------- Layout principal ---------- */
+
+#main-container {
+    height: 1fr;
+    padding: 1 2;
+}
+
+#left-panel {
+    width: 2fr;
+    height: 100%;
+    padding: 0 1 0 0;
+}
+
+#right-panel {
+    width: 1fr;
+    min-width: 34;
+    height: 100%;
+    padding: 0 0 0 1;
+    border-left: heavy $primary;
+}
+
+/* ---------- Panel izquierdo: biblioteca ---------- */
+
+#library-title {
+    width: 100%;
+    height: 1;
+    content-align: center middle;
+    text-style: bold;
+    color: $accent;
+    padding-bottom: 1;
+}
+
+#playlist {
+    width: 100%;
+    height: 1fr;
+    border: round $primary;
+    scrollbar-gutter: stable;
+}
+
+#playlist > .datatable--header {
+    text-style: bold;
+    background: $primary-darken-1;
+    color: $text;
+}
+
+#playlist > .datatable--cursor {
+    background: $accent;
+    color: $text;
+    text-style: bold;
+}
+
+/* ---------- Panel derecho: info y controles ---------- */
+
+#track-info {
+    width: 100%;
+    height: auto;
+    min-height: 7;
+    border: round $primary;
+    padding: 1 2;
+    margin-bottom: 1;
+}
+
+.info-label {
+    width: 100%;
+    text-style: bold italic;
+    color: $accent;
+    padding-bottom: 1;
+}
+
+/* ---------- Progreso ---------- */
+
+#progress-container {
+    width: 100%;
+    height: auto;
+    margin-bottom: 1;
+}
+
+#progress {
+    width: 100%;
+    height: 1;
+    margin-bottom: 1;
+}
+
+#progress > .bar--bar {
+    color: $accent;
+}
+
+#progress > .bar--complete {
+    color: $success;
+}
+
+/* ---------- Controles de reproducción ---------- */
+
+#controls {
+    width: 100%;
+    height: auto;
+    align: center middle;
+    margin-bottom: 1;
+}
+
+#controls Button {
+    width: 6;
+    height: 3;
+    margin: 0 1;
+    content-align: center middle;
+    text-style: bold;
+}
+
+#btn-play {
+    width: 8;
+}
+
+/* ---------- Volumen ---------- */
+
+#volume-container {
+    width: 100%;
+    height: auto;
+    margin-bottom: 1;
+}
+
+#volume-label {
+    width: 100%;
+    text-style: bold;
+    padding-bottom: 1;
+}
+
+#volume-bar {
+    width: 100%;
+    height: 1;
+}
+
+#volume-bar > .bar--bar {
+    color: $warning;
+}
+
+#volume-bar > .bar--complete {
+    color: $warning-darken-1;
+}
+
+/* ---------- Estado ---------- */
+
+#status {
+    width: 100%;
+    height: 1;
+    content-align: center middle;
+    text-style: bold;
+    background: $panel;
+    border: round $primary-darken-2;
+    margin-top: 1;
+    padding: 0 1;
+}
+
+/* ---------- Footer / Header ---------- */
+
+Header {
+    background: $primary-darken-1;
+    text-style: bold;
+}
+
+Footer {
+    background: $primary-darken-2;
+}
