@@ -15,6 +15,7 @@ class Reproductor(App):
         Binding(key="delete", action="delete", description="Delete the thing"),
         Binding(key="j", action="down", description="Scroll down", show=False),
     ]
+    CSS_PATH = "styles.css"
 
     def compose(self) -> ComposeResult:
         yield Header()
