@@ -1,0 +1,71 @@
+
+    Screen { align: center middle; }
+    
+    #main-container {
+        width: 100%;
+        height: 1fr;
+        padding: 1;
+    }
+    
+    #left-panel {
+        width: 60%;
+        height: 100%;
+        border: solid $primary;
+        padding: 1;
+    }
+    
+    #right-panel {
+        width: 40%;
+        height: 100%;
+        border: solid $primary-lighten-2;
+        padding: 1;
+    }
+    
+    #track-info {
+        height: auto;
+        padding: 1;
+        background: $surface-darken-1;
+        border: solid $primary-darken-2;
+        margin-bottom: 1;
+    }
+    
+    #controls {
+        height: auto;
+        align: center middle;
+        padding: 1;
+    }
+    
+    #progress-container {
+        height: auto;
+        padding: 1 0;
+    }
+    
+    #volume-container {
+        height: auto;
+        padding: 1 0;
+    }
+    
+    DataTable {
+        height: 1fr;
+        border: none;
+    }
+    
+    .info-label {
+        color: $text-muted;
+        text-style: bold;
+    }
+    
+    .info-value {
+        color: $text;
+    }
+    
+    #status {
+        text-align: center;
+        color: $success;
+        text-style: bold;
+    }
+    
+    Button {
+        width: auto;
+        margin: 0 1;
+    }
