@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import Optional
 
+import pygame.mixer as mixer
 from mutagen.mp3 import MP3
-from pygame import mixer
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
@@ -26,14 +26,12 @@ class Reproductor(App):
 
     BINDINGS = [
         Binding(key="q", action="quit", description="Salir"),
-        Binding(
-            key="space", action="toggle_play", description="Play/Pause", show=False
-        ),
-        Binding(key="s", action="stop", description="Detener", show=False),
-        Binding(key="n", action="next_track", description="Siguiente", show=False),
-        Binding(key="p", action="prev_track", description="Anterior", show=False),
-        Binding(key="up", action="volume_up", description="Vol +", show=False),
-        Binding(key="down", action="volume_down", description="Vol -", show=False),
+        Binding(key="space", action="toggle_play", description="Play/Pause"),
+        Binding(key="s", action="stop", description="Detener"),
+        Binding(key="n", action="next_track", description="Siguiente"),
+        Binding(key="p", action="prev_track", description="Anterior"),
+        Binding(key="up", action="volume_up", description="Vol +"),
+        Binding(key="down", action="volume_down", description="Vol -"),
         Binding(key="delete", action="delete_track", description="Eliminar"),
         Binding(key="enter", action="play_selected", description="Reproducir"),
         Binding(key="?", action="help", description="Ayuda", key_display="?"),
@@ -218,7 +216,6 @@ class Reproductor(App):
 
     def watch_volume(self, volume: int) -> None:
         """Actualiza la UI cuando cambia el volumen."""
-        # Solo intentamos actualizar la interfaz si el componente ya fue montado
         if self.is_mounted:
             self.query_one("#volume-label", Label).update(f"🔊 Volumen: {volume}%")
             self.query_one("#volume-bar", ProgressBar).update(progress=volume)
@@ -283,7 +280,7 @@ class Reproductor(App):
                 self.action_stop()
 
             try:
-                track.unlink()  # Elimina el archivo directamente con Path
+                track.unlink()
                 self.mp3_files.pop(row_idx)
                 self.scan_mp3_files()
                 self.notify(f"🗑 Eliminado: {track.name}", severity="information")
