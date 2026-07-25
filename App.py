@@ -1,9 +1,8 @@
-import os
 from pathlib import Path
 from typing import Optional
 
-from pygame import mixer
 from mutagen.mp3 import MP3
+from pygame import mixer
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
