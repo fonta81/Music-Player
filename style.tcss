@@ -32,6 +32,15 @@ Footer {
     color: #8a97a3;
 }
 
+/* Respaldo global: cualquier Button que reciba foco (p. ej. navegando
+   con Tab) usa el color de acento en vez del contorno blanco por
+   defecto de Textual. Las reglas #id:focus más específicas de abajo
+   tienen prioridad sobre esta. */
+Button:focus {
+    border: tall #4fd6be;
+    text-style: bold;
+}
+
 /* ======================================================================
    Contenedor principal
    ====================================================================== */
@@ -70,17 +79,53 @@ Footer {
     border: tall #4fd6be;
 }
 
+/* Elimina el contorno de foco blanco por defecto de Textual
+   (btn-folder recibe el foco automáticamente al iniciar la app,
+   ya que es el primer widget enfocable). */
+#btn-folder:focus {
+    background: #1c2a36;
+    color: #4fd6be;
+    border: tall #4fd6be;
+    text-style: bold;
+}
+
 #playlist {
     height: 1fr;
     margin-top: 1;
     background: #101923;
     border: round #263341;
+
+    /* Barra de scroll a juego con el panel en vez del gris/blanco
+       por defecto. */
+    scrollbar-background: #101923;
+    scrollbar-background-hover: #101923;
+    scrollbar-background-active: #101923;
+    scrollbar-color: #263341;
+    scrollbar-color-hover: #4fd6be;
+    scrollbar-color-active: #4fd6be;
+}
+
+/* Fondo base de cada celda: evita que el color por defecto del
+   DataTable se filtre entre filas o bajo el encabezado. */
+#playlist > .datatable--odd-row {
+    background: #101923;
+}
+
+#playlist > .datatable--even-row {
+    background: #16212b;
 }
 
 #playlist > .datatable--header {
     background: #1c2a36;
     color: #4fd6be;
     text-style: bold;
+}
+
+/* Línea/gap fijo bajo el encabezado: mismo tono que el encabezado
+   para que no aparezca como una franja blanca separada. */
+#playlist > .datatable--header-hover {
+    background: #1c2a36;
+    color: #4fd6be;
 }
 
 #playlist > .datatable--cursor {
@@ -91,6 +136,14 @@ Footer {
 
 #playlist > .datatable--hover {
     background: #1a2c33;
+}
+
+#playlist > .datatable--fixed {
+    background: #1c2a36;
+}
+
+#playlist > .datatable--fixed-cursor {
+    background: #234b45;
 }
 
 /* ---------- Panel derecho: info y controles ---------- */
@@ -161,7 +214,9 @@ Footer {
 }
 
 #btn-prev:hover,
-#btn-next:hover {
+#btn-next:hover,
+#btn-prev:focus,
+#btn-next:focus {
     background: #24384a;
     color: #4fd6be;
     border: tall #4fd6be;
@@ -174,8 +229,10 @@ Footer {
     min-width: 9;
 }
 
-#btn-play:hover {
+#btn-play:hover,
+#btn-play:focus {
     background: #234a3a;
+    color: #57d68d;
     border: tall #57d68d;
 }
 
@@ -185,8 +242,10 @@ Footer {
     border: tall #5f2f2f;
 }
 
-#btn-stop:hover {
+#btn-stop:hover,
+#btn-stop:focus {
     background: #4a2323;
+    color: #e5534b;
     border: tall #e5534b;
 }
 
@@ -278,8 +337,10 @@ FolderSelectScreen {
     border: tall #2f5f4a;
 }
 
-#btn-select:hover {
+#btn-select:hover,
+#btn-select:focus {
     background: #234a3a;
+    color: #57d68d;
     border: tall #57d68d;
 }
 
@@ -289,7 +350,9 @@ FolderSelectScreen {
     border: tall #5f2f2f;
 }
 
-#btn-cancel:hover {
+#btn-cancel:hover,
+#btn-cancel:focus {
     background: #4a2323;
+    color: #e5534b;
     border: tall #e5534b;
 }
