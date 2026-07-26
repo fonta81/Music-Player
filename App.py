@@ -129,12 +129,12 @@ class Reproductor(App):  # Inicialización de app
                         show_percentage=True,
                     )
 
-                yield Label("⏸ Detenido", id="status")
+                yield Label("⏹ Detenido", id="status")
 
         yield Footer()  # Footer
 
     def on_mount(self) -> None:  # Inicialización del menú
-        self.title = "🎵 Reproductor MP3"
+        self.title = "♪ Reproductor MP3"
         self.scan_mp3_files()
         mixer.music.set_volume(self.volume / 100.0)
         self.set_interval(0.5, self.update_progress)
@@ -292,14 +292,14 @@ class Reproductor(App):  # Inicialización de app
             duration = f"{mins}:{secs:02d}"
 
             info_text = (
-                f"[b]🎵 {title}[/b]\n\n"
+                f"[b]♪ {title}[/b]\n\n"
                 f"[b]Artista:[/b] {artist}\n"
                 f"[b]Álbum:[/b] {album}\n"
                 f"[b]Duración:[/b] {duration}\n"
                 f"[b]Archivo:[/b] {self.current_track.name}"
             )
         except Exception:
-            info_text = f"[b]🎵 {self.current_track.name}[/b]\n\nNo se pudieron leer los metadatos."
+            info_text = f"[b]♪ {self.current_track.name}[/b]\n\nNo se pudieron leer los metadatos."
 
         self.query_one("#track-info", Static).update(info_text)
 
