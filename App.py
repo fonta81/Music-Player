@@ -19,9 +19,6 @@ from textual.widgets import (
     Static,
 )
 
-# Inicialización del reproductor
-mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
-
 
 class FolderSelectScreen(ModalScreen[Optional[Path]]):
     """Pantalla modal para seleccionar una carpeta."""
@@ -41,13 +38,11 @@ class FolderSelectScreen(ModalScreen[Optional[Path]]):
             tree = self.query_one("#dir-tree", DirectoryTree)
             node = tree.cursor_node
 
-            # Extraemos la ruta asegurándonos de convertirla explícitamente a Path
             if node is not None and node.data is not None:
                 selected_path = Path(node.data.path)
             else:
                 selected_path = Path(tree.path)
 
-            # Si el usuario tiene seleccionado un archivo, tomar su carpeta contenedora
             if selected_path.is_file():
                 selected_path = selected_path.parent
 
@@ -56,7 +51,7 @@ class FolderSelectScreen(ModalScreen[Optional[Path]]):
             self.dismiss(None)
 
 
-class Reproductor(App):  # Inicialización de app
+class Reproductor(App):
     CSS_PATH = "style.tcss"
 
     BINDINGS = [
@@ -69,7 +64,6 @@ class Reproductor(App):  # Inicialización de app
         Binding(key="up", action="volume_up", description="Vol +"),
         Binding(key="down", action="volume_down", description="Vol -"),
         Binding(key="delete", action="delete_track", description="Eliminar"),
-        Binding(key="enter", action="play_selected", description="Reproducir"),
         Binding(key="?", action="help", description="Ayuda", key_display="?"),
     ]
 
@@ -78,20 +72,17 @@ class Reproductor(App):  # Inicialización de app
     is_playing: reactive[bool] = reactive(False)
     volume: reactive[int] = reactive(70, init=False)
     current_index: reactive[int] = reactive(-1)
-    current_dir: reactive[Path] = reactive(
-        Path.__file__.parent.resolve if False else Path.cwd()
-    )
+    current_dir: reactive[Path] = reactive(Path.cwd())
 
-    def __init__(self, **kwargs):  # Inicialización de variables
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.mp3_files: list[Path] = []
         self.current_dir = Path(__file__).parent.resolve()
 
-    def compose(self) -> ComposeResult:  # lo que "imprimirá"
+    def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
 
         with Horizontal(id="main-container"):
-            # Panel izquierdo: Lista de canciones
             with Vertical(id="left-panel"):
                 yield Button("📂 Abrir Carpeta", id="btn-folder", variant="default")
                 yield Label(
@@ -102,26 +93,25 @@ class Reproductor(App):  # Inicialización de app
                 table.zebra_stripes = True
                 yield table
 
-            # Panel derecho: Info y controles
             with Vertical(id="right-panel"):
                 yield Static(
                     "Selecciona una canción\npara comenzar",
                     id="track-info",
                 )
 
-                with Vertical(id="progress-container"):  # barra de progreso
+                with Vertical(id="progress-container"):
                     yield Label("Progreso", classes="info-label")
                     yield ProgressBar(
-                        id="progress", show_eta=False, show_percentage=True
+                        id="progress", total=100, show_eta=False, show_percentage=True
                     )
 
-                with Horizontal(id="controls"):  # botones
+                with Horizontal(id="controls"):
                     yield Button("⏮", id="btn-prev", variant="primary")
                     yield Button("▶", id="btn-play", variant="success")
                     yield Button("⏹", id="btn-stop", variant="error")
                     yield Button("⏭", id="btn-next", variant="primary")
 
-                with Vertical(id="volume-container"):  # barra de volumen
+                with Vertical(id="volume-container"):
                     yield Label(f"🔊 Volumen: {self.volume}%", id="volume-label")
                     yield ProgressBar(
                         total=100,
@@ -131,9 +121,10 @@ class Reproductor(App):  # Inicialización de app
 
                 yield Label("⏹ Detenido", id="status")
 
-        yield Footer()  # Footer
+        yield Footer()
 
-    def on_mount(self) -> None:  # Inicialización del menú
+    def on_mount(self) -> None:
+        mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
         self.title = "♪ Reproductor MP3"
         self.scan_mp3_files()
         mixer.music.set_volume(self.volume / 100.0)
@@ -153,7 +144,30 @@ class Reproductor(App):  # Inicialización de app
 
         self.push_screen(FolderSelectScreen(), folder_selected)
 
-    def scan_mp3_files(self) -> None:  # escanea en busca de mp3s
+    def _get_track_metadata(self, track_path: Path) -> dict:
+        """Extrae metadatos de un archivo MP3."""
+        try:
+            audio = MP3(str(track_path))
+            tags = audio.tags or {}
+            mins = int(audio.info.length // 60)
+            secs = int(audio.info.length % 60)
+            return {
+                "title": str(tags.get("TIT2", track_path.stem)),
+                "artist": str(tags.get("TPE1", "Desconocido")),
+                "album": str(tags.get("TALB", "—")),
+                "duration": f"{mins}:{secs:02d}",
+                "length": audio.info.length,
+            }
+        except Exception:
+            return {
+                "title": track_path.stem,
+                "artist": "Desconocido",
+                "album": "—",
+                "duration": "—",
+                "length": 0,
+            }
+
+    def scan_mp3_files(self) -> None:
         """Escanea la carpeta seleccionada buscando MP3."""
         self.mp3_files = sorted(self.current_dir.glob("*.mp3"))
 
@@ -165,37 +179,21 @@ class Reproductor(App):  # Inicialización de app
             table.add_row("—", "No hay archivos MP3", "—", "—", "—")
             return
 
-        for idx, mp3 in enumerate(self.mp3_files, 1):  # extrae info de los archivos
-            try:
-                audio = MP3(str(mp3))
-                tags = audio.tags or {}
-                title = str(tags.get("TIT2", mp3.stem))
-                artist = str(tags.get("TPE1", "Desconocido"))
-                mins = int(audio.info.length // 60)
-                secs = int(audio.info.length % 60)
-                duration = f"{mins}:{secs:02d}"
-                size = f"{mp3.stat().st_size / 1024 / 1024:.1f} MB"
-                table.add_row(str(idx), title, artist, duration, size)
-            except Exception:
-                table.add_row(str(idx), mp3.name, "—", "—", "—")
+        for idx, mp3 in enumerate(self.mp3_files, 1):
+            meta = self._get_track_metadata(mp3)
+            size = f"{mp3.stat().st_size / 1024 / 1024:.1f} MB"
+            table.add_row(
+                str(idx), meta["title"], meta["artist"], meta["duration"], size
+            )
+
+    def _is_valid_index(self, index: int) -> bool:
+        """Verifica si un índice está dentro del rango de la playlist."""
+        return 0 <= index < len(self.mp3_files)
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
-        """Al seleccionar una fila con Enter o clic."""
-        if not self.mp3_files:
-            return
+        """Al seleccionar una fila con Enter o doble clic."""
         row_idx = event.cursor_row
-        if 0 <= row_idx < len(self.mp3_files):
-            self.current_index = row_idx
-            self.play_track(self.mp3_files[row_idx])
-
-    def action_play_selected(self) -> None:
-        """Reproduce la canción seleccionada."""
-        table = self.query_one("#playlist", DataTable)
-        if table.row_count == 0 or not self.mp3_files:
-            return
-        row_key, _ = table.coordinate_to_cell_key(table.cursor_coordinate)
-        row_idx = table.get_row_index(row_key)
-        if 0 <= row_idx < len(self.mp3_files):
+        if self._is_valid_index(row_idx):
             self.current_index = row_idx
             self.play_track(self.mp3_files[row_idx])
 
@@ -206,37 +204,55 @@ class Reproductor(App):  # Inicialización de app
             mixer.music.play()
             self.current_track = track_path
             self.is_playing = True
+            self._update_playback_ui(playing=True)
             self.update_track_info()
-            self.query_one("#status", Label).update("▶ Reproduciendo")
-            self.query_one("#btn-play", Button).label = "⏸"
         except Exception as e:
             self.notify(f"Error al reproducir: {e}", severity="error")
+
+    def _update_playback_ui(self, playing: bool, paused: bool = False) -> None:
+        """Actualiza labels y botones según el estado de reproducción."""
+        status_label = self.query_one("#status", Label)
+        play_button = self.query_one("#btn-play", Button)
+
+        if paused:
+            status_label.update("⏸ Pausado")
+            play_button.label = "▶"
+        elif playing:
+            status_label.update("▶ Reproduciendo")
+            play_button.label = "⏸"
+        else:
+            status_label.update("⏹ Detenido")
+            play_button.label = "▶"
+            self.query_one("#progress", ProgressBar).update(progress=0)
 
     def action_toggle_play(self) -> None:
         """Play/Pause."""
         if not self.current_track:
-            self.action_play_selected()
+            table = self.query_one("#playlist", DataTable)
+            if table.row_count == 0 or not self.mp3_files:
+                return
+            row_key, _ = table.coordinate_to_cell_key(table.cursor_coordinate)
+            row_idx = table.get_row_index(row_key)
+            if self._is_valid_index(row_idx):
+                self.current_index = row_idx
+                self.play_track(self.mp3_files[row_idx])
             return
 
         if self.is_playing:
             mixer.music.pause()
             self.is_playing = False
-            self.query_one("#status", Label).update("⏸ Pausado")
-            self.query_one("#btn-play", Button).label = "▶"
+            self._update_playback_ui(playing=False, paused=True)
         else:
             mixer.music.unpause()
             self.is_playing = True
-            self.query_one("#status", Label).update("▶ Reproduciendo")
-            self.query_one("#btn-play", Button).label = "⏸"
+            self._update_playback_ui(playing=True)
 
     def action_stop(self) -> None:
         """Detiene la reproducción."""
         mixer.music.stop()
         self.is_playing = False
         self.current_track = None
-        self.query_one("#status", Label).update("⏹ Detenido")
-        self.query_one("#btn-play", Button).label = "▶"
-        self.query_one("#progress", ProgressBar).update(progress=0)
+        self._update_playback_ui(playing=False)
 
     def action_next_track(self) -> None:
         """Pasa a la siguiente canción."""
@@ -263,15 +279,14 @@ class Reproductor(App):  # Inicialización de app
     def action_volume_up(self) -> None:
         """Sube el volumen."""
         self.volume = min(100, self.volume + 10)
-        mixer.music.set_volume(self.volume / 100.0)
 
     def action_volume_down(self) -> None:
         """Baja el volumen."""
         self.volume = max(0, self.volume - 10)
-        mixer.music.set_volume(self.volume / 100.0)
 
     def watch_volume(self, volume: int) -> None:
-        """Actualiza la UI cuando cambia el volumen."""
+        """Actualiza UI y mixer cuando cambia el volumen (única fuente de verdad)."""
+        mixer.music.set_volume(volume / 100.0)
         if self.is_mounted:
             self.query_one("#volume-label", Label).update(f"🔊 Volumen: {volume}%")
             self.query_one("#volume-bar", ProgressBar).update(progress=volume)
@@ -281,26 +296,14 @@ class Reproductor(App):  # Inicialización de app
         if not self.current_track:
             return
 
-        try:
-            audio = MP3(str(self.current_track))
-            tags = audio.tags or {}
-            title = str(tags.get("TIT2", self.current_track.stem))
-            artist = str(tags.get("TPE1", "Desconocido"))
-            album = str(tags.get("TALB", "—"))
-            mins = int(audio.info.length // 60)
-            secs = int(audio.info.length % 60)
-            duration = f"{mins}:{secs:02d}"
-
-            info_text = (
-                f"[b]♪ {title}[/b]\n\n"
-                f"[b]Artista:[/b] {artist}\n"
-                f"[b]Álbum:[/b] {album}\n"
-                f"[b]Duración:[/b] {duration}\n"
-                f"[b]Archivo:[/b] {self.current_track.name}"
-            )
-        except Exception:
-            info_text = f"[b]♪ {self.current_track.name}[/b]\n\nNo se pudieron leer los metadatos."
-
+        meta = self._get_track_metadata(self.current_track)
+        info_text = (
+            f"[b]♪ {meta['title']}[/b]\n\n"
+            f"[b]Artista:[/b] {meta['artist']}\n"
+            f"[b]Álbum:[/b] {meta['album']}\n"
+            f"[b]Duración:[/b] {meta['duration']}\n"
+            f"[b]Archivo:[/b] {self.current_track.name}"
+        )
         self.query_one("#track-info", Static).update(info_text)
 
     def update_progress(self) -> None:
@@ -309,14 +312,14 @@ class Reproductor(App):  # Inicialización de app
             return
 
         try:
-            audio = MP3(str(self.current_track))
-            total = audio.info.length
+            meta = self._get_track_metadata(self.current_track)
+            total = meta["length"]
             pos_ms = mixer.music.get_pos()
             if pos_ms > 0:
                 current = pos_ms / 1000.0
                 progress = (current / total) * 100 if total > 0 else 0
                 self.query_one("#progress", ProgressBar).update(
-                    total=100, progress=min(100, progress)
+                    progress=min(100, progress)
                 )
         except Exception:
             pass
@@ -330,7 +333,7 @@ class Reproductor(App):  # Inicialización de app
         row_key, _ = table.coordinate_to_cell_key(table.cursor_coordinate)
         row_idx = table.get_row_index(row_key)
 
-        if 0 <= row_idx < len(self.mp3_files):
+        if self._is_valid_index(row_idx):
             track = self.mp3_files[row_idx]
             if self.current_track == track:
                 self.action_stop()
