@@ -5,11 +5,13 @@ import pygame.mixer as mixer
 from mutagen.mp3 import MP3
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
+from textual.containers import Container, Horizontal, Vertical
 from textual.reactive import reactive
+from textual.screen import ModalScreen
 from textual.widgets import (
     Button,
     DataTable,
+    DirectoryTree,
     Footer,
     Header,
     Label,
@@ -21,11 +23,45 @@ from textual.widgets import (
 mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
 
 
+class FolderSelectScreen(ModalScreen[Optional[Path]]):
+    """Pantalla modal para seleccionar una carpeta."""
+
+    def compose(self) -> ComposeResult:
+        with Container(id="dialog"):
+            yield Label(
+                "📁 Selecciona una carpeta con archivos MP3:", id="dialog-title"
+            )
+            yield DirectoryTree(Path.home(), id="dir-tree")
+            with Horizontal(id="dialog-buttons"):
+                yield Button("Seleccionar Carpeta", id="btn-select", variant="success")
+                yield Button("Cancelar", id="btn-cancel", variant="error")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-select":
+            tree = self.query_one("#dir-tree", DirectoryTree)
+            node = tree.cursor_node
+
+            # Extraemos la ruta asegurándonos de convertirla explícitamente a Path
+            if node is not None and node.data is not None:
+                selected_path = Path(node.data.path)
+            else:
+                selected_path = Path(tree.path)
+
+            # Si el usuario tiene seleccionado un archivo, tomar su carpeta contenedora
+            if selected_path.is_file():
+                selected_path = selected_path.parent
+
+            self.dismiss(selected_path)
+        elif event.button.id == "btn-cancel":
+            self.dismiss(None)
+
+
 class Reproductor(App):  # Inicialización de app
     CSS_PATH = "style.tcss"
 
     BINDINGS = [
         Binding(key="q", action="quit", description="Salir"),
+        Binding(key="o", action="select_folder", description="Abrir carpeta"),
         Binding(key="space", action="toggle_play", description="Play/Pause"),
         Binding(key="s", action="stop", description="Detener"),
         Binding(key="n", action="next_track", description="Siguiente"),
@@ -42,18 +78,25 @@ class Reproductor(App):  # Inicialización de app
     is_playing: reactive[bool] = reactive(False)
     volume: reactive[int] = reactive(70, init=False)
     current_index: reactive[int] = reactive(-1)
+    current_dir: reactive[Path] = reactive(
+        Path.__file__.parent.resolve if False else Path.cwd()
+    )
 
-    def __init__(self, **kwargs):  # Inicialización de varables
+    def __init__(self, **kwargs):  # Inicialización de variables
         super().__init__(**kwargs)
         self.mp3_files: list[Path] = []
+        self.current_dir = Path(__file__).parent.resolve()
 
-    def compose(self) -> ComposeResult:  # lo que "imprimira"
+    def compose(self) -> ComposeResult:  # lo que "imprimirá"
         yield Header(show_clock=True)
 
         with Horizontal(id="main-container"):
             # Panel izquierdo: Lista de canciones
             with Vertical(id="left-panel"):
-                yield Label("📁 Biblioteca MP3", id="library-title")
+                yield Button("📂 Abrir Carpeta", id="btn-folder", variant="default")
+                yield Label(
+                    f"📁 Biblioteca MP3: {self.current_dir.name}", id="library-title"
+                )
                 table = DataTable(id="playlist")
                 table.cursor_type = "row"
                 table.zebra_stripes = True
@@ -90,16 +133,29 @@ class Reproductor(App):  # Inicialización de app
 
         yield Footer()  # Footer
 
-    def on_mount(self) -> None:  # Inicialización del menu
+    def on_mount(self) -> None:  # Inicialización del menú
         self.title = "🎵 Reproductor MP3"
         self.scan_mp3_files()
         mixer.music.set_volume(self.volume / 100.0)
         self.set_interval(0.5, self.update_progress)
 
+    def action_select_folder(self) -> None:
+        """Abre la pantalla modal para elegir carpeta."""
+
+        def folder_selected(folder: Optional[Path]) -> None:
+            if folder and folder.is_dir():
+                self.current_dir = folder
+                self.action_stop()
+                self.scan_mp3_files()
+                self.query_one("#library-title", Label).update(
+                    f"📁 Biblioteca: {folder.name}"
+                )
+
+        self.push_screen(FolderSelectScreen(), folder_selected)
+
     def scan_mp3_files(self) -> None:  # escanea en busca de mp3s
-        """Escanea la carpeta del script buscando MP3."""
-        script_dir = Path(__file__).parent.resolve()
-        self.mp3_files = sorted(script_dir.glob("*.mp3"))
+        """Escanea la carpeta seleccionada buscando MP3."""
+        self.mp3_files = sorted(self.current_dir.glob("*.mp3"))
 
         table = self.query_one("#playlist", DataTable)
         table.clear(columns=True)
@@ -290,7 +346,9 @@ class Reproductor(App):  # Inicialización de app
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Maneja clicks en los botones."""
         btn_id = event.button.id
-        if btn_id == "btn-play":
+        if btn_id == "btn-folder":
+            self.action_select_folder()
+        elif btn_id == "btn-play":
             self.action_toggle_play()
         elif btn_id == "btn-stop":
             self.action_stop()
@@ -302,6 +360,7 @@ class Reproductor(App):  # Inicialización de app
     def action_help(self) -> None:
         self.notify(
             "Controles:\n"
+            "• [O] → Seleccionar carpeta\n"
             "• [Enter] o doble clic → Reproducir\n"
             "• [Espacio] → Play/Pause\n"
             "• [S] → Detener\n"
