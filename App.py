@@ -67,17 +67,23 @@ class Reproductor(App):
         Binding(key="?", action="help", description="Ayuda", key_display="?"),
     ]
 
-    # Estado reactivo
-    current_track: reactive[Optional[Path]] = reactive(None)
-    is_playing: reactive[bool] = reactive(False)
+    # Estado reactivo (solo volumen necesita watcher)
     volume: reactive[int] = reactive(70, init=False)
-    current_index: reactive[int] = reactive(-1)
-    current_dir: reactive[Path] = reactive(Path.cwd())
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.mp3_files: list[Path] = []
         self.current_dir = Path(__file__).parent.resolve()
+
+        # Estado simple (no necesita reactividad)
+        self.current_track: Optional[Path] = None
+        self.is_playing = False
+        self.current_index = -1
+
+        # Cache de metadatos y progreso
+        self._current_meta: dict = {}
+        self._progress_offset: float = 0.0
+        self._last_resume_time: float = 0.0
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -190,6 +196,11 @@ class Reproductor(App):
         """Verifica si un índice está dentro del rango de la playlist."""
         return 0 <= index < len(self.mp3_files)
 
+    def _get_cursor_index(self, table: DataTable) -> int:
+        """Obtiene el índice de fila actual del cursor."""
+        row_key, _ = table.coordinate_to_cell_key(table.cursor_coordinate)
+        return table.get_row_index(row_key)
+
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Al seleccionar una fila con Enter o doble clic."""
         row_idx = event.cursor_row
@@ -204,6 +215,9 @@ class Reproductor(App):
             mixer.music.play()
             self.current_track = track_path
             self.is_playing = True
+            self._current_meta = self._get_track_metadata(track_path)
+            self._progress_offset = 0.0
+            self._last_resume_time = mixer.music.get_pos() / 1000.0
             self._update_playback_ui(playing=True)
             self.update_track_info()
         except Exception as e:
@@ -231,8 +245,7 @@ class Reproductor(App):
             table = self.query_one("#playlist", DataTable)
             if table.row_count == 0 or not self.mp3_files:
                 return
-            row_key, _ = table.coordinate_to_cell_key(table.cursor_coordinate)
-            row_idx = table.get_row_index(row_key)
+            row_idx = self._get_cursor_index(table)
             if self._is_valid_index(row_idx):
                 self.current_index = row_idx
                 self.play_track(self.mp3_files[row_idx])
@@ -241,10 +254,14 @@ class Reproductor(App):
         if self.is_playing:
             mixer.music.pause()
             self.is_playing = False
+            # Acumular progreso real antes de pausar
+            elapsed = (mixer.music.get_pos() / 1000.0) - self._last_resume_time
+            self._progress_offset += max(0, elapsed)
             self._update_playback_ui(playing=False, paused=True)
         else:
             mixer.music.unpause()
             self.is_playing = True
+            self._last_resume_time = mixer.music.get_pos() / 1000.0
             self._update_playback_ui(playing=True)
 
     def action_stop(self) -> None:
@@ -252,23 +269,25 @@ class Reproductor(App):
         mixer.music.stop()
         self.is_playing = False
         self.current_track = None
+        self._current_meta = {}
+        self._progress_offset = 0.0
         self._update_playback_ui(playing=False)
+
+    def _change_track(self, delta: int) -> None:
+        """Cambia de pista en la dirección indicada (+1 siguiente, -1 anterior)."""
+        if not self.mp3_files:
+            return
+        self.current_index = (self.current_index + delta) % len(self.mp3_files)
+        self.play_track(self.mp3_files[self.current_index])
+        self._highlight_row(self.current_index)
 
     def action_next_track(self) -> None:
         """Pasa a la siguiente canción."""
-        if not self.mp3_files:
-            return
-        self.current_index = (self.current_index + 1) % len(self.mp3_files)
-        self.play_track(self.mp3_files[self.current_index])
-        self._highlight_row(self.current_index)
+        self._change_track(1)
 
     def action_prev_track(self) -> None:
         """Vuelve a la anterior."""
-        if not self.mp3_files:
-            return
-        self.current_index = (self.current_index - 1) % len(self.mp3_files)
-        self.play_track(self.mp3_files[self.current_index])
-        self._highlight_row(self.current_index)
+        self._change_track(-1)
 
     def _highlight_row(self, index: int) -> None:
         """Mueve el cursor del DataTable a la fila activa."""
@@ -287,16 +306,15 @@ class Reproductor(App):
     def watch_volume(self, volume: int) -> None:
         """Actualiza UI y mixer cuando cambia el volumen (única fuente de verdad)."""
         mixer.music.set_volume(volume / 100.0)
-        if self.is_mounted:
-            self.query_one("#volume-label", Label).update(f"🔊 Volumen: {volume}%")
-            self.query_one("#volume-bar", ProgressBar).update(progress=volume)
+        self.query_one("#volume-label", Label).update(f"🔊 Volumen: {volume}%")
+        self.query_one("#volume-bar", ProgressBar).update(progress=volume)
 
     def update_track_info(self) -> None:
         """Actualiza el panel de información del track actual."""
         if not self.current_track:
             return
 
-        meta = self._get_track_metadata(self.current_track)
+        meta = self._current_meta
         info_text = (
             f"[b]♪ {meta['title']}[/b]\n\n"
             f"[b]Artista:[/b] {meta['artist']}\n"
@@ -312,15 +330,18 @@ class Reproductor(App):
             return
 
         try:
-            meta = self._get_track_metadata(self.current_track)
-            total = meta["length"]
-            pos_ms = mixer.music.get_pos()
-            if pos_ms > 0:
-                current = pos_ms / 1000.0
-                progress = (current / total) * 100 if total > 0 else 0
-                self.query_one("#progress", ProgressBar).update(
-                    progress=min(100, progress)
-                )
+            total = self._current_meta.get("length", 0)
+            if total <= 0:
+                return
+
+            # Calcular progreso real considerando pausas
+            current_pos = self._progress_offset + (
+                (mixer.music.get_pos() / 1000.0) - self._last_resume_time
+            )
+            progress = (current_pos / total) * 100
+            self.query_one("#progress", ProgressBar).update(
+                progress=min(100, max(0, progress))
+            )
         except Exception:
             pass
 
@@ -330,8 +351,7 @@ class Reproductor(App):
         if table.row_count == 0 or not self.mp3_files:
             return
 
-        row_key, _ = table.coordinate_to_cell_key(table.cursor_coordinate)
-        row_idx = table.get_row_index(row_key)
+        row_idx = self._get_cursor_index(table)
 
         if self._is_valid_index(row_idx):
             track = self.mp3_files[row_idx]
