@@ -21,7 +21,7 @@ from textual.widgets import (
 mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
 
 
-class Reproductor(App):
+class Reproductor(App):  # Inicialización de app
     CSS_PATH = "style.tcss"
 
     BINDINGS = [
@@ -43,11 +43,11 @@ class Reproductor(App):
     volume: reactive[int] = reactive(70, init=False)
     current_index: reactive[int] = reactive(-1)
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs):  # Inicialización de varables
         super().__init__(**kwargs)
         self.mp3_files: list[Path] = []
 
-    def compose(self) -> ComposeResult:
+    def compose(self) -> ComposeResult:  # lo que "imprimira"
         yield Header(show_clock=True)
 
         with Horizontal(id="main-container"):
@@ -66,19 +66,19 @@ class Reproductor(App):
                     id="track-info",
                 )
 
-                with Vertical(id="progress-container"):
+                with Vertical(id="progress-container"):  # barra de progreso
                     yield Label("Progreso", classes="info-label")
                     yield ProgressBar(
                         id="progress", show_eta=False, show_percentage=True
                     )
 
-                with Horizontal(id="controls"):
+                with Horizontal(id="controls"):  # botones
                     yield Button("⏮", id="btn-prev", variant="primary")
                     yield Button("▶", id="btn-play", variant="success")
                     yield Button("⏹", id="btn-stop", variant="error")
                     yield Button("⏭", id="btn-next", variant="primary")
 
-                with Vertical(id="volume-container"):
+                with Vertical(id="volume-container"):  # barra de volumen
                     yield Label(f"🔊 Volumen: {self.volume}%", id="volume-label")
                     yield ProgressBar(
                         total=100,
@@ -88,15 +88,15 @@ class Reproductor(App):
 
                 yield Label("⏸ Detenido", id="status")
 
-        yield Footer()
+        yield Footer()  # Footer
 
-    def on_mount(self) -> None:
+    def on_mount(self) -> None:  # Inicialización del menu
         self.title = "🎵 Reproductor MP3"
         self.scan_mp3_files()
         mixer.music.set_volume(self.volume / 100.0)
         self.set_interval(0.5, self.update_progress)
 
-    def scan_mp3_files(self) -> None:
+    def scan_mp3_files(self) -> None:  # escanea en busca de mp3s
         """Escanea la carpeta del script buscando MP3."""
         script_dir = Path(__file__).parent.resolve()
         self.mp3_files = sorted(script_dir.glob("*.mp3"))
@@ -109,7 +109,7 @@ class Reproductor(App):
             table.add_row("—", "No hay archivos MP3", "—", "—", "—")
             return
 
-        for idx, mp3 in enumerate(self.mp3_files, 1):
+        for idx, mp3 in enumerate(self.mp3_files, 1):  # extrae info de los archivos
             try:
                 audio = MP3(str(mp3))
                 tags = audio.tags or {}
