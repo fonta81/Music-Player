@@ -33,7 +33,7 @@ class VentanaAyuda(ModalScreen):  # ventana help
             "  [b]↓[/]                             - Bajar en el árbol\n\n"
             "[substantive]Acciones:[/]\n\n"
             "  [b]o[/]                             - Seleccionar carpeta\n"
-            "  [b]Enter[/] o [b]Doble Click[/]     - Reproducir\n"
+            "  [b]Enter[/] o [b]Doble Click[/]           - Reproducir\n"
             "  [b]Espacio[/]                       - Play/Pause\n"
             "  [b]s[/]                             - Detener\n"
             "  [b]n[/]                             - Siguiente\n"
