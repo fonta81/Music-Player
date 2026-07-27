@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Optional
 
+from textual.containers import Grid
 import pygame.mixer as mixer
 from mutagen.mp3 import MP3
 from textual.app import App, ComposeResult
@@ -18,6 +19,36 @@ from textual.widgets import (
     ProgressBar,
     Static,
 )
+
+
+class VentanaAyuda(ModalScreen):  # ventana help
+    # Atajos para cerrar la ayuda rápidamente con Esc, ? o q
+    BINDINGS = [Binding("escape,?,q", "dismiss", "Cerrar Ayuda")]
+
+    def compose(self) -> ComposeResult:  # ayuda:
+        texto_ayuda = (
+            "[bold]Guía de Atajos de Teclado[/]\n\n"
+            "[substantive]Navegación:[/]\n"
+            "  [b]↑[/]                             - Subir en el árbol\n"
+            "  [b]↓[/]                             - Bajar en el árbol\n\n"
+            "[substantive]Acciones:[/]\n\n"
+            "  [b]o[/]                             - Seleccionar carpeta\n"
+            "  [b]Enter[/] o [b]Doble Click[/]     - Reproducir\n"
+            "  [b]Espacio[/]                       - Play/Pause\n"
+            "  [b]s[/]                             - Detener\n"
+            "  [b]n[/]                             - Siguiente\n"
+            "  [b]Supr[/]                          - Elimina archivo\n\n"
+            "[substantive]General:[/]\n"
+            "  [b]?[/]                             - Mostrar/Ocultar esta ayuda\n"
+            "  [b]q[/]                             - Salir de la aplicación\n\n"
+            "[dim]Presiona cualquier tecla asignada o ESC para cerrar[/]"
+        )
+
+        yield Grid(
+            Label("AYUDA", id="help_title"),
+            Static(texto_ayuda, id="help_content"),
+            id="help_dialog",
+        )
 
 
 class FolderSelectScreen(ModalScreen[Optional[Path]]):
@@ -381,21 +412,7 @@ class Reproductor(App):
             self.action_prev_track()
 
     def action_help(self) -> None:
-        self.notify(
-            "Controles:\n"
-            "• [O] → Seleccionar carpeta\n"
-            "• [Enter] o doble clic → Reproducir\n"
-            "• [Espacio] → Play/Pause\n"
-            "• [S] → Detener\n"
-            "• [N] → Siguiente\n"
-            "• [P] → Anterior\n"
-            "• [↑/↓] → Volumen\n"
-            "• [Supr] → Eliminar archivo\n"
-            "• [Q] → Salir",
-            title="Ayuda",
-            severity="information",
-            timeout=8,
-        )
+        self.push_screen(VentanaAyuda())
 
     def on_unmount(self) -> None:
         mixer.quit()
