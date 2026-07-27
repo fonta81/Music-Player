@@ -1,12 +1,11 @@
 from pathlib import Path
 from typing import Optional
 
-from textual.containers import Grid
 import pygame.mixer as mixer
 from mutagen.mp3 import MP3
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Horizontal, Vertical
+from textual.containers import Container, Grid, Horizontal, Vertical
 from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual.widgets import (
