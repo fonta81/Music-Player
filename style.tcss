@@ -356,3 +356,39 @@ FolderSelectScreen {
     color: #e5534b;
     border: tall #e5534b;
 }
+
+/* ======================================================================
+   Modal: pantalla de ayuda
+   ====================================================================== */
+
+VentanaAyuda {
+    align: center middle;
+}
+
+#help_dialog {
+    width: 35%; /*Cambiar en caso de meter mas info al cuadro de ayuda*/
+    height: auto;
+    max-height: 85%;
+    padding: 2 3;
+    background: #16212b;
+    border: thick #4fd6be;
+    content-align: center middle;
+}
+
+#help_title {
+    width: 100%;
+    height: auto;
+    color: #4fd6be;
+    text-style: bold;
+    content-align: center middle;
+    margin-bottom: 1;
+}
+
+#help_content {
+    width: 100%;
+    height: auto;
+    padding: 1 2;
+    background: #101923;
+    border: round #263341;
+    color: #e6edf3;
+}
