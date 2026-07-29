@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import Optional
 
-import pygame.mixer as mixer
 from mutagen.mp3 import MP3
+from pygame import mixer
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Grid, Horizontal, Vertical
@@ -106,7 +106,7 @@ class Reproductor(App):
         self.current_dir = Path(__file__).parent.resolve()
 
         # Estado simple (no necesita reactividad)
-        self.current_track: Optional[Path] = None
+        self.current_track: Path | None = None
         self.is_playing = False
         self.current_index = -1
 
@@ -169,7 +169,7 @@ class Reproductor(App):
     def action_select_folder(self) -> None:
         """Abre la pantalla modal para elegir carpeta."""
 
-        def folder_selected(folder: Optional[Path]) -> None:
+        def folder_selected(folder: Path | None) -> None:
             if folder and folder.is_dir():
                 self.current_dir = folder
                 self.action_stop()
